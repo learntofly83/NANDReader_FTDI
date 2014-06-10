@@ -2,13 +2,13 @@
 //
 
 #include "stdafx.h"
+#include <unistd.h>
 #include <stdio.h>
 #include "stdlib.h"
 #include "string.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
 #ifdef WIN32
 #include <io.h>
 #endif
@@ -29,6 +29,7 @@ int main(int argc, _TCHAR* argv[])
 {
 int x, r;
 	int vid=0, pid=0;
+	int start_pageno = -1, end_pageno = -1;
 	bool err=false;
 	bool doSlow=false;
 	string file="";
@@ -79,6 +80,11 @@ int x, r;
 				printf("Must be 'main' 'oob' or 'both': %s\n", argv[x]);
 				err=true;
 			}
+		} else if (strcmp(argv[x], "-p") == 0 && x <= (argc - 3)) {
+			x++;
+			start_pageno = strtol(argv[x], NULL, 10);
+			x++;
+			end_pageno = strtol(argv[x], NULL, 10);
 		} else if (strcmp(argv[x],"-s")==0) {
 			doSlow=true;
 		} else {
@@ -88,16 +94,20 @@ int x, r;
 	}
 
 	if (action==actionNone || err || argc==1) {
-		printf("Usage: [-i|-r file|-v file] [-t main|oob|both] [-s]\n");
+		printf("Usage: [-i|-r file|-v file] [-p <start page no> <end pageno> [-t main|oob|both] [-s]\n");
 		printf("  -i      - Identify chip\n");
 		printf("  -r file - Read chip to file\n");
 		printf("  -w file - Write chip from file\n");
 		printf("  -v file - Verify chip from file data\n");
+		printf("  -p <start pageno> <end pagenon>  - Select page to operate\n");
 		printf("  -t reg  - Select region to read/write (main mem, oob ('spare') data or both, interleaved)\n");
 		printf("  -s      - clock FTDI chip at 12MHz instead of 60MHz\n");
 		printf("  -u vid:pid - use different FTDI USB vid/pid. Vid and pid are in hex.\n");
 		exit(0);
 	}
+
+	if (start_pageno == -1)
+		start_pageno = 0;
 
 	FtdiNand ftdi;
 	ftdi.open(vid,pid,doSlow);
@@ -127,7 +137,13 @@ int x, r;
 		int verifyErrors=0;
 		nand.showInfo();
 		printf("%sing %li pages of %i bytes...\n", action==actionRead?"Read":"Verify", pages, id->getPageSize());
-		for (x=0; x<pages; x++) {
+
+		if (end_pageno == -1)
+		{
+			end_pageno = pages;
+		}
+
+		for (x = start_pageno; x<end_pageno; x++) {
 			nand.readPage(x, pageBuf, size, access);
 			if (action==actionRead) {
 				r=write(f, pageBuf, size);
@@ -155,7 +171,47 @@ int x, r;
 		if (action==actionVerify) {
 			printf("Verify: %i bytes differ between NAND and file.\n", verifyErrors);
 		}
-	}
+	} else {
+	 int f;
+	 f = open(file.c_str(), O_RDONLY | O_BINARY);
+	 if (f<0) {
+		 perror(file.c_str());
+		 exit(1);
+	 }
+
+	 NandID *id = nand.getIdPtr();
+	 long pages = (id->getSizeMB() * 1024LL * 1024LL) / id->getPageSize();
+	 int size = 0;
+	 if (access == NandChip::accessMain) size = id->getPageSize();
+	 if (access == NandChip::accessOob) size = id->getOobSize();
+	 if (access == NandChip::accessBoth) size = id->getOobSize() + id->getPageSize();
+	 char *pageBuf = new char[size];
+	 nand.showInfo();
+	 printf("Writinging %li pages of %i bytes...\n", pages, id->getPageSize());
+	 
+	 if (end_pageno == -1)
+	 {
+		 end_pageno = pages;
+	 }
+
+	 for (x = start_pageno; x<end_pageno; x++) {
+		 r = read(f, pageBuf, size);
+		 if (r != size) {
+			 perror("reading data from file");
+			 exit(1);
+		 }
+		 
+		 if (x % 32 == 0)
+		 {
+			 nand.eraseBlock(x);
+		 }
+
+		 int err = nand.writePage(x, pageBuf, size, access);
+		 if ((x & 15) == 0) {
+			 printf("%i/%li\n\033[A", x, pages);
+		 }
+	 }
+   }
 	
 	printf("All done.\n"); 
 	return 0;

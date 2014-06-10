@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <stdio.h>
-#include <cstdlib>
 #include <unistd.h>
+#include <cstdlib>
 #include "FtdiNand.hpp"
 #ifdef WIN32
 #include <windows.h>
@@ -47,7 +47,7 @@ int FtdiNand::nandRead(int cl, int al, char *buf, int count) {
 	for (x=0; x<count; x++) {
 		if (x==0) {
 			cmds[i++]=READ_EXTENDED;
-			cmds[i++]=(cl?ADR_CL:0)|(al?ADR_AL:0);
+			cmds[i++]=(cl?ADR_CL:0)|(al?ADR_AL:0)|ADR_WP;
 			cmds[i++]=0;
 		} else {
 			cmds[i++]=READ_SHORT;
@@ -91,7 +91,7 @@ int FtdiNand::nandWrite(int cl, int al, char *buf, int count) {
 	for (x=0; x<count; x++) {
 		if (x==0) {
 			cmds[i++]=WRITE_EXTENDED;
-			cmds[i++]=(cl?ADR_CL:0)|(al?ADR_AL:0);
+			cmds[i++] = (cl ? ADR_CL : 0) | (al ? ADR_AL : 0) | ADR_WP;
 			cmds[i++]=0;
 		} else {
 			cmds[i++]=WRITE_SHORT;

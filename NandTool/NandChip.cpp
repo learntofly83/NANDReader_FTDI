@@ -18,6 +18,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <cstdlib>
 #include "NandChip.hpp"
 #include "NandData.hpp"
 #include "NandDataLP.hpp"
@@ -26,7 +27,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <cstdlib>
 #include "NandCmds.h"
 
 NandChip::NandChip(FtdiNand *fn) {
@@ -84,6 +84,9 @@ int NandChip::writePage(int page, char *buff, int count, NandChip::AccessType ac
 	return r;
 }
 
+int NandChip::eraseBlock(int block) {
+	m_data->eraseBlock(block);
+}
 
 NandID *NandChip::getIdPtr() {
 	return m_id;

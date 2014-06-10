@@ -50,7 +50,7 @@ const NandID::DevCodes NandID::m_devCodes[]={
 	{"NAND 1MiB 3,3V 8-bit",	0xe8, 256, 1, 0x1000, 0, 3},
 	{"NAND 1MiB 3,3V 8-bit",	0xec, 256, 1, 0x1000, 0, 3},
 	{"NAND 2MiB 3,3V 8-bit",	0xea, 256, 2, 0x1000, 0, 3},
-	{"NAND 4MiB 3,3V 8-bit",	0xd5, 512, 4, 0x2000, 0, 3},
+	//{"NAND 4MiB 3,3V 8-bit",	0xd5, 512, 4, 0x2000, 0, 3},
 	{"NAND 4MiB 3,3V 8-bit",	0xe3, 512, 4, 0x2000, 0, 3},
 	{"NAND 4MiB 3,3V 8-bit",	0xe5, 512, 4, 0x2000, 0, 3},
 	{"NAND 8MiB 3,3V 8-bit",	0xd6, 512, 8, 0x2000, 0, 3},
@@ -162,7 +162,17 @@ static int nand_id_len(unsigned char *id_data, int arrlen)
 NandID::NandID(FtdiNand *fn, unsigned char *idBytes) {
 	int x;
 	for (x=0; x<8; x++) m_idBytes[x]=idBytes[x];
-	
+
+	printf("\n%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X\n", 
+		idBytes[0],
+		idBytes[1],
+		idBytes[2],
+		idBytes[3],
+		idBytes[4],
+		idBytes[5],
+		idBytes[6],
+		idBytes[7]
+		);
 	x=0;
 	while (m_devCodes[x].id!=0 && m_devCodes[x].id!=idBytes[1]) x++;
 	if (m_devCodes[x].id==0) {
